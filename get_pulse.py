@@ -1,17 +1,19 @@
-from lib.device import Camera
-from lib.processors_noopenmdao import findFaceGetPulse
-from lib.interface import plotXY, imshow, waitKey, destroyWindow
-from cv2 import moveWindow
 import argparse
-import numpy as np
 import datetime
-#TODO: work on serial port comms, if anyone asks for it
-#from serial import Serial
+# TODO: work on serial port comms, if anyone asks for it
+# from serial import Serial
 import socket
 import sys
 
-class getPulseApp(object):
+import numpy as np
+from cv2 import destroyWindow, moveWindow, waitKey, imshow
 
+from lib.device import Camera
+from lib.interface import plotXY
+from lib.processors_noopenmdao import findFaceGetPulse
+
+
+class getPulseApp(object):
     """
     Python application that finds a face in a webcam stream, then isolates the
     forehead.
@@ -21,12 +23,11 @@ class getPulseApp(object):
     """
 
     def __init__(self, args):
-        # Imaging device - must be a connected camera (not an ip camera or mjpeg
-        # stream)
-        serial = args.serial
-        baud = args.baud
+        # Imaging device - must be a connected camera (not an ip camera or mjpeg stream)
         self.send_serial = False
         self.send_udp = False
+        serial = args.serial
+        baud = args.baud
         if serial:
             self.send_serial = True
             if not baud:
@@ -45,8 +46,8 @@ class getPulseApp(object):
                 ip, port = udp.split(":")
                 port = int(port)
             self.udp = (ip, port)
-            self.sock = socket.socket(socket.AF_INET, # Internet
-                 socket.SOCK_DGRAM) # UDP
+            self.sock = socket.socket(socket.AF_INET,  # Internet
+                                      socket.SOCK_DGRAM)  # UDP
 
         self.cameras = []
         self.selected_cam = 0
@@ -58,25 +59,20 @@ class getPulseApp(object):
                 break
         self.w, self.h = 0, 0
         self.pressed = 0
-        # Containerized analysis of recieved image frames (an openMDAO assembly)
-        # is defined next.
+        # Containerized analysis of received image frames (an openMDAO assembly) is defined next.
 
-        # This assembly is designed to handle all image & signal analysis,
-        # such as face detection, forehead isolation, time series collection,
-        # heart-beat detection, etc.
+        # This assembly is designed to handle all image & signal analysis, such as face detection,
+        # forehead isolation, time series collection, heart-beat detection, etc.
 
-        # Basically, everything that isn't communication
-        # to the camera device or part of the GUI
-        self.processor = findFaceGetPulse(bpm_limits=[50, 160],
-                                          data_spike_limit=2500.,
-                                          face_detector_smoothness=10.)
+        # Basically, everything that isn't communication to the camera device or part of the GUI
+        self.processor = findFaceGetPulse()
 
         # Init parameters for the cardiac data plot
         self.bpm_plot = False
         self.plot_title = "Data display - raw signal (top) and PSD (bottom)"
 
         # Maps keystrokes to specified methods
-        #(A GUI window must have focus for these to work)
+        # (A GUI window must have focus for these to work)
         self.key_controls = {"s": self.toggle_search,
                              "d": self.toggle_display_plot,
                              "c": self.toggle_cam,
@@ -107,7 +103,7 @@ class getPulseApp(object):
         Locking the forehead location in place significantly improves
         data quality, once a forehead has been sucessfully isolated.
         """
-        #state = self.processor.find_faces.toggle()
+        # state = self.processor.find_faces.toggle()
         state = self.processor.find_faces_toggle()
         print("face detection lock =", not state)
 
@@ -172,9 +168,6 @@ class getPulseApp(object):
         frame = self.cameras[self.selected_cam].get_frame()
         self.h, self.w, _c = frame.shape
 
-        # display unaltered frame
-        # imshow("Original",frame)
-
         # set current image frame to the processor's input
         self.processor.frame_in = frame
         # process the image frame to perform all needed analysis
@@ -198,6 +191,7 @@ class getPulseApp(object):
         # handle any key presses
         self.key_handler()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Webcam pulse detector.')
     parser.add_argument('--serial', default=None,
@@ -209,5 +203,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     App = getPulseApp(args)
+
     while True:
         App.main_loop()

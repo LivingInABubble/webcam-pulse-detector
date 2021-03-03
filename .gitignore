@@ -53,3 +53,5 @@ dist/
 Icon?
 ehthumbs.db
 Thumbs.db
+
+.idea/
